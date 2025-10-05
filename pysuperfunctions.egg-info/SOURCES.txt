@@ -1,0 +1,9 @@
+setup.py
+pysuperfunctions/__init__.py
+pysuperfunctions/superprint.py
+pysuperfunctions/utils.py
+pysuperfunctions.egg-info/PKG-INFO
+pysuperfunctions.egg-info/SOURCES.txt
+pysuperfunctions.egg-info/dependency_links.txt
+pysuperfunctions.egg-info/top_level.txt
+test/testpm.py
