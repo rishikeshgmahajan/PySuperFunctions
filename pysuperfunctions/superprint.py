@@ -1,3 +1,5 @@
+import re
+
 __all__ = ["superprint",
            "b","u","e","d","bl","r","h", "i", "s", 
            "bold","underline","italic","strike","dim","blink","reverse","hide",
@@ -52,6 +54,55 @@ class FormatWholeString:
     def bg(self, hex_code): self.styles.append(bg(hex_code)); return self
     def indent(self, spaces): self.indent_size = spaces; return self
 
+    # TABLE
+    def tabulate(self):
+        text = self.raw_content
+        ansi_pattern = re.compile(r'\x1B\[[0-9;:]*m')
+        placeholders = []
+        def save_ansi(m):
+            placeholders.append(m.group(0))
+            return f'§§{len(placeholders)-1}§§'
+        text = ansi_pattern.sub(save_ansi, text)
+        rows = [r.strip() for r in text.split(";") if r.strip()]
+        table_data = [r.split(",") for r in rows]
+        table_data = [[c.strip() for c in row] for row in table_data]
+        if not table_data:
+            self.raw_content = ""
+            return self
+        max_cols = max(len(r) for r in table_data)
+        for row in table_data:
+            while len(row) < max_cols:
+                row.append("")
+        def visible_len(s):
+            return len(re.sub(r'§§\d+§§', '', s))
+        col_widths = [max(visible_len(r[i]) for r in table_data) for i in range(max_cols)]
+        def fmt_row(row):
+            cells=[]
+            for i,c in enumerate(row):
+                pad=col_widths[i]-visible_len(c)
+                cells.append(c+' '*pad)
+            return "| "+" | ".join(cells)+" |"
+        header=fmt_row(table_data[0])
+        sep="| "+" | ".join("-"*col_widths[i] for i in range(max_cols))+" |"
+        body=[fmt_row(r) for r in table_data[1:]]
+        out="\n".join([header,sep]+body)
+        def restore_ansi(s):
+            for i,p in enumerate(placeholders):
+                s=s.replace(f'§§{i}§§',p)
+            return s
+        self.raw_content=restore_ansi(out)
+        return self
+
+
+    def color_header(self, hex_code):
+        fg_code = fg(hex_code)
+        e_code = e
+        lines = self.raw_content.split("\n")
+        if lines:
+            lines[0] = fg_code + lines[0] + e_code
+        self.raw_content = "\n".join(lines)
+        return self
+
     # CONDITIONAL BEHAVIOR
     def if_(self, condition):
         result = condition() if callable(condition) else condition
@@ -66,27 +117,45 @@ class FormatWholeString:
             return self
         return self
 
-    # FORMATTING FUNCTION (runs only when printing/str)
+    # FORMATTING FUNCTION FOR LIST, TUPLES, DICTS, SETS
     def format_content(self, obj, level=0):
         space = " " * (self.indent_size * level)
+        next_space = " " * (self.indent_size * (level + 1))
+
         if isinstance(obj, dict):
-            if not obj: return "{}"
-            items = [f'{space}{" " * self.indent_size}"{k}": {self.format_content(v, level+1)}' for k,v in obj.items()]
+            if not obj:
+                return "{}"
+            items = [f"{next_space}'{k}': {self.format_content(v, level + 1)}" for k, v in obj.items()]
             return "{\n" + ",\n".join(items) + f"\n{space}}}"
-        elif isinstance(obj, list):
-            if not obj: return "[]"
-            items = [f'{space}{" " * self.indent_size}{self.format_content(i, level+1)}' for i in obj]
-            return "[\n" + ",\n".join(items) + f"\n{space}]"
-        elif isinstance(obj, tuple):
-            if not obj: return "()"
-            items = [f'{space}{" " * self.indent_size}{self.format_content(i, level+1)}' for i in obj]
-            return "(\n" + ",\n".join(items) + f"\n{space})"
-        elif isinstance(obj, set):
-            if not obj: return "set()"
-            items = [f'{space}{" " * self.indent_size}{self.format_content(i, level+1)}' for i in obj]
-            return "{\n" + ",\n".join(items) + f"\n{space}}}"
-        elif isinstance(obj, str): return obj
-        else: return str(obj)
+
+        elif isinstance(obj, (list, tuple, set)):
+            open_bracket = "[" if isinstance(obj, list) else "(" if isinstance(obj, tuple) else "{"
+            close_bracket = "]" if isinstance(obj, list) else ")" if isinstance(obj, tuple) else "}"
+            if not obj:
+                return open_bracket + close_bracket
+
+            items = []
+            for i in obj:
+                if isinstance(i, (list, tuple, set, dict)):
+                    items.append(self.format_content(i, level + 1))
+                else:
+                    items.append(repr(i) if isinstance(i, str) else str(i))
+
+            joined = ", ".join(items)
+            if all(not isinstance(i, (list, tuple, set, dict)) for i in obj):
+                return f"{open_bracket}{joined}{close_bracket}"
+            else:
+                inner = ",\n".join(f"{next_space}{self.format_content(i, level + 1)}" for i in obj)
+                return f"{open_bracket}\n{inner}\n{space}{close_bracket}"
+
+        elif isinstance(obj, str):
+            return repr(obj)  # quote strings
+        elif isinstance(obj, bool):
+            return str(obj).lower()  # true/false instead of True/False
+        else:
+            return str(obj)
+
+
 
     # PRINTING BEHAVIOR
     def __str__(self):
