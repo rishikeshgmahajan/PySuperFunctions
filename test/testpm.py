@@ -1,6 +1,8 @@
 from pysuperfunctions import *
+import pprint
 
-list_ = {"name":"Rishi","age":24,"skills":[f"{b}Python{e}","PyQt5","Markdown","C++","HTML","CSS","JavaScript"],"projects":[{"title":"Markdown Editor","features":["syntax highlighting","preview","templates","dark mode"],"language":"Python"},{"title":"Station Master Game","features":["signals","tracks","switches","control panel"],"language":"Python"}],"education":{"degree":"B.Tech","branch":"Computer Science","year":2025},"experience":[{"company":"TechNova","role":"Software Engineer","duration":"1 year"},{"company":"DevForge","role":"Intern","duration":"6 months"}],"social":{"github":"https://github.com/rishi","linkedin":"https://linkedin.com/in/rishi"},"preferences":{"theme":"dark","font":"JetBrains Mono","autosave":"true"},"achievements":["Hackathon Winner 2024","Top 1% Pythonist"],"status":"active"}
+json = {"name":"Rishi","age":25,"skills":["Python","C++","PyQt5"],"projects":[{"title":"Markdown Editor","year":2024},{"title":"Station Master Game","year":2025}],"active":"true"}
 
-superprint(list_).indent(10).indent(-5)
-superprint("hello",f"{ded(1)}world","and", f"{ind(-1)}python")
+superprint(json).indent(3)
+
+pprint.pprint(json)
