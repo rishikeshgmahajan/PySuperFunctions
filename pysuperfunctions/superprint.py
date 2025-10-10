@@ -149,9 +149,9 @@ class FormatWholeString:
                 return f"{open_bracket}\n{inner}\n{space}{close_bracket}"
 
         elif isinstance(obj, str):
-            return repr(obj)  # quote strings
+            return repr(obj) 
         elif isinstance(obj, bool):
-            return str(obj).lower()  # true/false instead of True/False
+            return str(obj).lower() 
         else:
             return str(obj)
 
